@@ -88,29 +88,7 @@ static vita2d_texture *_vita2d_create_empty_texture_format_advanced(unsigned int
 		h,
 		0);
 
-	if ((format & 0x9f000000U) == SCE_GXM_TEXTURE_BASE_FORMAT_P8) {
-
-		const int pal_size = 256 * sizeof(uint32_t);
-
-		void *texture_palette = gpu_alloc(
-			MemBlockType,
-			pal_size,
-			SCE_GXM_PALETTE_ALIGNMENT,
-			SCE_GXM_MEMORY_ATTRIB_READ,
-			&texture->palette_UID);
-
-		if (!texture_palette) {
-			texture->palette_UID = 0;
-			vita2d_free_texture(texture);
-			return NULL;
-		}
-
-		memset(texture_palette, 0, pal_size);
-
-		sceGxmTextureSetPalette(&texture->gxm_tex, texture_palette);
-	} else {
-		texture->palette_UID = 0;
-	}
+	texture->palette_UID = 0;
 
 	if (isRenderTarget) {
 

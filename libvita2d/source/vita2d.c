@@ -134,6 +134,8 @@ typedef struct vita2d_fragment_programs {
 struct {
 	vita2d_fragment_programs blend_mode_normal;
 	vita2d_fragment_programs blend_mode_add;
+	vita2d_fragment_programs blend_mode_subtract;
+	vita2d_fragment_programs blend_mode_one;
 } _vita2d_fragmentPrograms;
 
 // Temporary memory pool
@@ -511,10 +513,30 @@ static int vita2d_init_internal(unsigned int temp_pool_size, SceGxmMultisampleMo
 	static const SceGxmBlendInfo blend_info_add = {
 		.colorFunc = SCE_GXM_BLEND_FUNC_ADD,
 		.alphaFunc = SCE_GXM_BLEND_FUNC_ADD,
+		.colorSrc  = SCE_GXM_BLEND_FACTOR_SRC_ALPHA,
+		.colorDst  = SCE_GXM_BLEND_FACTOR_DST_ALPHA,
+		.alphaSrc  = SCE_GXM_BLEND_FACTOR_SRC_ALPHA,
+		.alphaDst  = SCE_GXM_BLEND_FACTOR_DST_ALPHA,
+		.colorMask = SCE_GXM_COLOR_MASK_ALL
+	};
+
+	static const SceGxmBlendInfo blend_info_subtract = {
+		.colorFunc = SCE_GXM_BLEND_FUNC_REVERSE_SUBTRACT,
+		.alphaFunc = SCE_GXM_BLEND_FUNC_ADD,
+		.colorSrc  = SCE_GXM_BLEND_FACTOR_SRC_ALPHA,
+		.colorDst  = SCE_GXM_BLEND_FACTOR_DST_ALPHA,
+		.alphaSrc  = SCE_GXM_BLEND_FACTOR_SRC_ALPHA,
+		.alphaDst  = SCE_GXM_BLEND_FACTOR_DST_ALPHA,
+		.colorMask = SCE_GXM_COLOR_MASK_ALL
+	};
+
+		static const SceGxmBlendInfo blend_info_one = {
+		.colorFunc = SCE_GXM_BLEND_FUNC_ADD,
+		.alphaFunc = SCE_GXM_BLEND_FUNC_ADD,
 		.colorSrc  = SCE_GXM_BLEND_FACTOR_ONE,
-		.colorDst  = SCE_GXM_BLEND_FACTOR_ONE,
-		.alphaSrc  = SCE_GXM_BLEND_FACTOR_ONE,
-		.alphaDst  = SCE_GXM_BLEND_FACTOR_ONE,
+		.colorDst  = SCE_GXM_BLEND_FACTOR_ZERO,
+		.alphaSrc  = SCE_GXM_BLEND_FACTOR_SRC_ALPHA,
+		.alphaDst  = SCE_GXM_BLEND_FACTOR_DST_ALPHA,
 		.colorMask = SCE_GXM_COLOR_MASK_ALL
 	};
 
@@ -663,6 +685,8 @@ static int vita2d_init_internal(unsigned int temp_pool_size, SceGxmMultisampleMo
 	// Create variations of the fragment program based on blending mode
 	_vita2d_make_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_normal, &blend_info, msaa);
 	_vita2d_make_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_add, &blend_info_add, msaa);
+	_vita2d_make_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_subtract, &blend_info_subtract, msaa);
+	_vita2d_make_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_one, &blend_info_one, msaa);
 
 	// Default to "normal" blending mode (non-additive)
 	vita2d_set_blend_mode_add(0);
@@ -746,6 +770,8 @@ int vita2d_fini()
 
 	_vita2d_free_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_normal);
 	_vita2d_free_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_add);
+	_vita2d_free_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_subtract);
+	_vita2d_free_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_one);
 
 	gpu_free(linearIndicesUid);
 	gpu_free(clearVerticesUid);
@@ -1072,10 +1098,25 @@ void vita2d_pool_reset()
 	pool_index = 0;
 }
 
-void vita2d_set_blend_mode_add(int enable)
+void vita2d_set_blend_mode_add(int type)
 {
-	vita2d_fragment_programs *in = enable ? &_vita2d_fragmentPrograms.blend_mode_add
-	    : &_vita2d_fragmentPrograms.blend_mode_normal;
+	vita2d_fragment_programs *in;
+	if(type == 0)
+	{
+		in = &_vita2d_fragmentPrograms.blend_mode_normal;
+	} 
+	else if(type == 1)
+	{
+		in = &_vita2d_fragmentPrograms.blend_mode_add;
+	} 
+	else if(type == 2)
+	{
+		in = &_vita2d_fragmentPrograms.blend_mode_subtract;
+	}
+	else
+	{
+		in = &_vita2d_fragmentPrograms.blend_mode_one;
+	}
 
 	_vita2d_colorFragmentProgram = in->color;
 	_vita2d_textureFragmentProgram = in->texture;
